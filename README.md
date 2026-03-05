@@ -1,6 +1,6 @@
 # Additive Modeling and Dynamic Programming for F1 Pit-Stop Optimization
 
-This project leverages raw telemetry data via the `FastF1` library to build a prescriptive race strategy engine. By combining additive predictive models—accounting for polynomial tire degradation, fuel mass interactions, and logarithmic track evolution—with a Dynamic Programming solver, it mathematically calculates the optimal pit-stop sequence to minimize overall race time.
+This project leverages raw telemetry data via the `FastF1` library to build a prescriptive race strategy engine. By combining additive predictive models accounting for polynomial tire degradation, fuel mass interactions, and logarithmic track evolution with a Dynamic Programming solver, it mathematically calculates the possible optimal pit-stop sequence to minimize overall race time.
 
 ## Core Concepts
 
@@ -17,7 +17,7 @@ To determine the base pace difference between Soft, Medium, and Hard tires, we c
 ### 3. The Additive Pace Equation
 The core predictive engine of this project is an additive model that forecasts expected lap times based on three heavily engineered features:
 
-$$Expected\_Lap = Base\_Pace + f(Tire\_Age, Fuel\_Mass) - h(Track\_Evolution)$$
+Expected_Lap = Base_Pace + f(Tire_Age, Fuel_Mass) - h(Track_Evolution)
 
 #### A. Dynamic Tire Degradation & Fuel Interaction $f(x, y)$
 Tires do not degrade linearly; they fall off a "cliff." Furthermore, a heavy car (Lap 1) destroys tires exponentially faster than a light car (Lap 50). We use **Ordinary Least Squares (OLS)** wrapped in **Polynomial Regression** (At Degree 2 to prevent mathematical overfitting and hallucinated lap times).
