@@ -28,5 +28,5 @@ As cars lay down rubber, the track gets faster, but this improvement experiences
 * **Implementation Note:** For dry Sunday race data, the track is usually fully "rubbered in," meaning coefficient $a$ approaches zero. This variable remains in the pipeline to ensure the algorithm is robust enough to handle "green" tracks (e.g., following morning rain).
 
 ### 4. Strategy Optimization (Dynamic Programming)
-Once the expected lap time matrix is generated, we must navigate it to find the fastest possible race time. A greedy algorithm would fail here, as taking a short-term loss (a 24-second pit stop) is required for a long-term gain (fresh tires).
+Once the expected lap time matrix is generated, we must navigate it to find the fastest possible race time. Some may say, "why not use a greedy algorithm?" A greedy algorithm would fail here, as taking a short-term loss (a 24-second pit stop) is required for a long-term gain (fresh tires).
 * **Implementation:** The algorithm breaks the race down into recursive sub-problems, calculating the cost of "pitting" vs. "staying out" at every single lap. It utilizes **Memoization** to store the time costs of previously calculated states (Current Lap, Current Compound, Tire Age), efficiently mapping millions of potential strategy trees to output the absolute global minimum race time.
