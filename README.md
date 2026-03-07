@@ -1,4 +1,4 @@
-# Additive Modeling and Dynamic Programming for F1 Pit-Stop Optimization
+# Additive Modeling and Dynamic Programming for F1 Pit-Stop Optimization (Still Ongoing)
 
 This project leverages raw telemetry data via the `FastF1` library to build a prescriptive race strategy engine. By combining additive predictive models accounting for polynomial tire degradation, fuel mass interactions, and logarithmic track evolution with a Dynamic Programming solver, it mathematically calculates the possible optimal pit-stop sequence to minimize overall race time.
 
