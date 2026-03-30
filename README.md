@@ -75,4 +75,22 @@ To force the algorithm to respect real-world F1 physics, three major architectur
 | **DP Chosen Strategy** | 2-Stop (Unrealistic Stints) | **3-Stop** (Aggressive Sprinting) |
 | **Optimal Clean-Air Time** | 5505.75s | **5475.61s** |
 
+### Strategy Comparison: Visualizing the 21-Second Advantage
+![Cumulative Race Time: Model vs Actual](output_modelvsVER.png)
+
+This graph visualizes the cumulative race time of both strategies simulated in a clean-air environment using the Phase 4 predictive physics engine. 
+
+**Graph Legend:**
+* **Baseline (Blue Dashed Line):** Represents Max Verstappen's actual pit wall strategy (Soft -> Hard -> Soft). 
+* **Model (Solid Green Line):** Represents the DP Solver's optimized 3-stop strategy (Medium -> Soft -> Soft -> Soft).
+* **Slope Indicator:** A flatter line indicates faster lap times, while a steeper line indicates slower lap times caused by tire degradation. 
+
+**Takeaways:**
+1. **The Undercut Advantage:** At Lap 10, the model triggers its first pit stop (first red dotted line). The green line spikes upward, representing the 23.5-second pit lane time penalty. Immediately after exiting the pits on fresh Soft tires, the green line's slope becomes noticeably flatter than the blue baseline. 
+2. **Compound Dominance:** Between Laps 18 and 38, the baseline strategy shifts to the durable but slower Hard tire. The model rejects the Hard tire entirely, chaining together aggressive sprints on Softs. The model absorbs the 70.5 seconds of total pit-stop penalties because its pace on fresh rubber is significantly faster than the baseline's pace on older, harder rubber.
+3. **The Divergence:** By Lap 40, the green line crosses below the blue line permanently. The model has compounded its pace advantage enough to entirely erase the time deficit of the additional pit stop. 
+4. **Final Delta:** The model completes the 57-lap simulation in 5475.61 seconds, crossing the finish line **21.02 seconds** ahead of the actual baseline strategy.
+
+
+
 **Conclusion:** By fixing the physics constraints and tuning the hyperparameters to match Red Bull's real-world environment, the V2 DP Solver successfully identified an aggressive 3-Stop optimal strategy (Medium -> Soft -> Soft -> Soft). When simulated in a clean-air environment, this mathematically optimized sequence is theoretically **~21 seconds faster** than the actual strategy executed on the pit wall.
