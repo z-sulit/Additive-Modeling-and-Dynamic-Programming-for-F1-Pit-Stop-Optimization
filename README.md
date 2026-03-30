@@ -1,32 +1,43 @@
-# Additive Modeling and Dynamic Programming for F1 Pit-Stop Optimization (Still Ongoing)
+# Additive Modeling and Dynamic Programming for F1 Pit-Stop Optimization
 
-This project leverages raw telemetry data via the `FastF1` library to build a prescriptive race strategy engine. By combining additive predictive models accounting for polynomial tire degradation, fuel mass interactions, and logarithmic track evolution with a Dynamic Programming solver, it mathematically calculates the possible optimal pit-stop sequence to minimize overall race time.
+This project leverages raw telemetry data via the FastF1 library to build a prescriptive race strategy engine. By combining additive predictive models accounting for polynomial tire degradation, fuel mass interactions, and logarithmic track evolution with a Dynamic Programming solver, it mathematically calculates the optimal pit-stop sequence to minimize overall race time.
 
-## Core Concepts
+## Project Phases & Progress
 
-To accurately simulate the non-linear environment of a Formula 1 race, this project relies on a pipeline of advanced statistical methods before any optimization occurs.
+### Phase 1: Environment Setup and Data Acquisition (Completed)
+- Utilized the `fastf1` library to extract telemetry and timing data for the 2024 Bahrain Grand Prix.
+- Selected Max Verstappen as the reference driver to model standard performance curves and minimize driver-induced variance.
 
-### 1. Robust Anomaly Detection (IQR & Z-Scores)
-Raw lap times are incredibly noisy. Filtering out Safety Cars (SC) and Pit Laps is insufficient, as driver mistakes, lock-ups, and traffic (DRS trains) heavily skew degradation models. We apply Interquartile Range (IQR) and Z-Score ($\sigma > 2$) filtering to each driver's continuous stint.
-* **Purpose:** This mathematically identifies and drops hidden outliers, ensuring our regression models fit the driver's *true* clean-air pace rather than their traffic-affected pace.
+### Phase 2: Data Preprocessing and Cleaning (Completed)
+Raw lap times are incredibly noisy. Filtering out Safety Cars (SC) and Pit Laps is insufficient, as driver mistakes, lock-ups, and traffic heavily skew degradation models.
+- Filtered for green-flag racing laps, removing SC, VSC, in-laps, and out-laps using FastF1's built-in pit detection.
+- Applied an Interquartile Range (IQR) filter per stint. Implementing both upper and lower bounds successfully eliminated mathematical outliers (e.g., anomalies like a 92.5s data-glitch lap), ensuring models fit true clean-air pace.
 
-### 2. Compound Profiling (ANOVA & Mixed-Effects)
-To determine the base pace difference between Soft, Medium, and Hard tires, we cannot rely on raw averages, as Free Practice lap times are contaminated by varying fuel loads. We use Free Practice 2 (FP2) long-run data and apply **Mixed-Effects Models** (or ANOVA).
-* **Purpose:** This mathematically isolates the "Compound Delta" from the fuel load, proving statistically significant time differences between tires in a controlled, independent environment.
+### Phase 3: Exploratory Data Analysis & Compound Profiling (Completed)
+To determine the base pace difference between Soft, Medium, and Hard tires, lap times must be isolated from fuel loads.
+- Attempted to use Free Practice 2 (FP2) long-run data and Mixed-Effects Models to calculate exact compound deltas.
+- Discovered a lack of variance in FP2 data across top teams (100% of long runs were executed on Softs in Bahrain to save race sets). As a result, the Mixed-Effects model failed to converge.
+- To maintain statistical integrity, the pipeline bypassed empirical calculation for Bahrain and explicitly encoded official pre-race Pirelli deltas to normalize the Sunday race data.
 
-### 3. The Additive Pace Equation
-The core predictive engine of this project is an additive model that forecasts expected lap times based on three heavily engineered features:
+### Phase 4: Additive Predictive Modeling (Completed)
+The core predictive engine is an additive model forecasting expected lap times based on three engineered features:
 
-Expected_Lap = Base_Pace + f(Tire_Age, Fuel_Mass) - h(Track_Evolution)
+`Expected_Lap = Base_Pace + f(Tire_Age, Fuel_Mass) - h(Track_Evolution)`
 
-#### A. Dynamic Tire Degradation & Fuel Interaction $f(x, y)$
-Tires do not degrade linearly; they fall off a "cliff." Furthermore, a heavy car (Lap 1) destroys tires exponentially faster than a light car (Lap 50). We use **Ordinary Least Squares (OLS)** wrapped in **Polynomial Regression** (At Degree 2 to prevent mathematical overfitting and hallucinated lap times).
-* **Interaction Term:** We multiply Tire Age by Fuel Mass. This dynamically steepens the degradation curve based on the physical weight of the car at that exact point in the race.
+- **Model Validation:** Validated a Degree 2 Polynomial Regression model against a Degree 1 Linear model. The Degree 2 model demonstrated a decisive superior fit (R-Squared: 0.9550 vs 0.7890).
+- **Key Coefficient Insights:**
+  - `TireAge * Fuel_Mass` (+0.00396): The interaction term validates the core thesis of the project. Tires degrade significantly faster on a heavy car; a full tank and old tires amplify each other's pace penalty.
+  - `Fuel_Mass` (-0.12990): Mathematically confirmed the physical effect of fuel burn, saving roughly 0.13 seconds per lap for every kilogram of fuel burned.
+  - `TireAge^2` (+0.00853): Accurately modeled the exponential degradation "cliff" where lap times start climbing rapidly late in a stint.
+  - `Log_Track_Evo` (-2.00792): Indicated track evolution was still significantly improving lap times throughout the race.
 
-#### B. Logarithmic Track Evolution $h(x)$
-As cars lay down rubber, the track gets faster, but this improvement experiences diminishing returns. We fit a logarithmic curve $y = a \ln(x) + b$ to map the track improvement.
-* **Implementation Note:** For dry Sunday race data, the track is usually fully "rubbered in," meaning coefficient $a$ approaches zero. This variable remains in the pipeline to ensure the algorithm is robust enough to handle "green" tracks (e.g., following morning rain).
+### Phase 5: Optimization Algorithm Development (Pending)
+Once the expected lap time matrix is generated, the algorithm must navigate it to find the fastest possible race time. A greedy algorithm fails here because it cannot evaluate short-term losses (a 24-second pit stop) for long-term gains (fresh tires).
+- Goal: Develop a Dynamic Programming (DP) solver breaking the race into recursive sub-problems, calculating the cost of "pitting" vs. "staying out" at every lap.
+- Constraints: Total race distance, fixed pit lane time loss, and the mandatory two-compound sporting regulation.
+- Optimization: Utilize Memoization to store the time costs of previously calculated states (Lap, Compound, Age), mapping millions of potential strategy trees to output the global minimum race time efficiently.
 
-### 4. Strategy Optimization (Dynamic Programming)
-Once the expected lap time matrix is generated, we must navigate it to find the fastest possible race time. Some may say, "why not use a greedy algorithm?" A greedy algorithm would fail here, as taking a short-term loss (a 24-second pit stop) is required for a long-term gain (fresh tires).
-* **Implementation:** The algorithm breaks the race down into recursive sub-problems, calculating the cost of "pitting" vs. "staying out" at every single lap. It utilizes **Memoization** to store the time costs of previously calculated states (Current Lap, Current Compound, Tire Age), efficiently mapping millions of potential strategy trees to output the absolute global minimum race time.
+### Phase 6: Evaluation and Reporting (Pending)
+- Compare the deterministic DP model's optimal strategy against the actual winning strategy to calculate theoretical time gains.
+- Generate a line graph showing the cumulative race time of the optimal strategy versus conventional 1-stop or 3-stop alternatives.
+- Discuss limitations, specifically stochastic elements such as traffic, unpredicted weather, and inconsistent driver pace that the deterministic DP model cannot foresee.
