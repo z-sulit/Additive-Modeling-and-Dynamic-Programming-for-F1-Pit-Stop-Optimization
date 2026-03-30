@@ -234,24 +234,39 @@ warnings.filterwarnings('ignore', category=UserWarning)
 
 #the warnings are annoying
 
-# Constants
-PIT_LOSS = 24.0  # seconds lost per pit stop 
-MIN_STINT_LENGTH = 5  # minimum laps on a set of tires
+PIT_LOSS = 23.5  # Tuned down from 24.0! Red Bull executes fast pit lane traverses.
+MIN_STINT_LENGTH = 5 
 COMPOUNDS = ['SOFT', 'MEDIUM', 'HARD']
 
-def predict_lap_time(lap_number, tire_age, compound):
-    fuel_mass = STARTING_FUEL_KG - (lap_number * FUEL_BURN_PER_LAP)
-    log_track_evo = np.log(float(lap_number))
+# Adjusted for freezing Bahrain night track 
+compound_deltas = {
+    'HARD': 0.0,
+    'MEDIUM': -0.9, 
+    'SOFT': -1.8     # Tuned up from -1.4!
+}
 
-    X_raw = np.array([[tire_age, fuel_mass]])
-    X_poly = poly2.transform(X_raw)  # uses the fitted poly2 from Phase 4
+# The required tire physics multipliers
+degradation_multipliers = {
+    'SOFT': 1.40,    #
+    'MEDIUM': 1.15,  
+    'HARD': 0.85     
+}
+
+def predict_lap_time(lap_number, tire_age, compound):
+    #888
+    effective_tire_age = tire_age * degradation_multipliers[compound]
+    
+    fuel_mass = STARTING_FUEL_KG - (lap_number * FUEL_BURN_PER_LAP)
+    log_track_evo = np.log(float(lap_number)) if lap_number > 0 else 0
+
+    X_raw = np.array([[effective_tire_age, fuel_mass]])
+    X_poly = poly2.transform(X_raw)  
     X_full = np.column_stack((X_poly, [[log_track_evo]]))
     
     normalized_time = model2.predict(X_full)[0]
     compound_delta = compound_deltas.get(compound, 0.0)
     
     return normalized_time + compound_delta
-
 
 #------------------ REcursion Dynamic Programming SOlver
 memo = {}
@@ -261,15 +276,15 @@ def solve_race(lap, current_compound, tire_age, used_compounds):
     if lap > TOTAL_LAPS:
         # F1 Mandatory Rule: Must use at least 2 different compounds!
         if len(used_compounds) < 2:
-            return float('inf'), [] # Disqualified! Infinite time penalty.
+            return float('inf'), [] # Disqualified!
         return 0.0, []
         
-    # 2. Check Memoization Cache (Have we calculated this exact future before?)
+
     state = (lap, current_compound, tire_age, frozenset(used_compounds))
     if state in memo:
         return memo[state]
 
-    # 3. Predict lap time using YOUR custom function
+    #Predict lap time using YOUR custom function
     current_lap_time = predict_lap_time(lap, tire_age, current_compound)
 
     # Stay out on track
@@ -286,7 +301,7 @@ def solve_race(lap, current_compound, tire_age, used_compounds):
             new_used = set(used_compounds)
             new_used.add(new_compound)
             
-            time_pit, path_pit = solve_race(lap + 1, new_compound, 2, new_used)
+            time_pit, path_pit = solve_race(lap + 1, new_compound, 1, new_used)
             total_pit = current_lap_time + PIT_LOSS + time_pit
             
             if total_pit < best_pit_time:
@@ -359,3 +374,80 @@ print(f"\nDP Total (clean-air):   {best_overall_time:.2f}s")
 print(f"VER Actual (real race): {raw_race_time:.2f}s")
 print(f"\nNote: The ~{raw_race_time - best_overall_time:.0f}s gap is expected — it represents")
 print(f"cumulative traffic, pit entry/exit, and real-world noise across 57 laps.")
+
+
+print("\nComparison Graph")
+
+def simulate_strategy_timeline(strategy_sequence, start_tire):
+    cumulative_times = []
+    current_time = 0.0
+    current_tire = start_tire
+    tire_age = 1
+
+    for lap, action in strategy_sequence:
+        if "PIT FOR" in action:
+            current_time += PIT_LOSS # Add pit lane penalty
+            current_tire = action.replace("PIT FOR ", "").strip() # Parse new tire
+            tire_age = 1 # Reset tire age
+            lap_time = predict_lap_time(lap, tire_age, current_tire)
+            current_time += lap_time
+            cumulative_times.append(current_time)
+            tire_age += 1
+        else:
+
+            lap_time = predict_lap_time(lap, tire_age, current_tire)
+            current_time += lap_time
+            cumulative_times.append(current_time)
+            tire_age += 1
+            
+    return cumulative_times
+
+# 2. Get the timeline for your AI's optimal strategy
+dp_cumulative_timeline = simulate_strategy_timeline(winning_strategy, starting_tire)
+
+# eRconstruct Verstappen's ACTUAL 2024 Bahrain Strategy
+#Started on SOFT, pitted Lap 18 for HARD, pitted Lap 38 for SOFT
+ver_actual_strategy = []
+current_tire = "SOFT"
+for lap in range(1, TOTAL_LAPS + 1):
+    if lap == 18:
+        ver_actual_strategy.append((lap, "PIT FOR HARD"))
+        current_tire = "HARD"
+    elif lap == 38:
+        ver_actual_strategy.append((lap, "PIT FOR SOFT"))
+        current_tire = "SOFT"
+    else:
+        ver_actual_strategy.append((lap, f"STAY OUT ({current_tire})"))
+
+ver_cumulative_timeline = simulate_strategy_timeline(ver_actual_strategy, "SOFT")
+
+sns.set_theme(style="darkgrid")
+plt.figure(figsize=(14, 7))
+
+laps_x = range(1, TOTAL_LAPS + 1)
+
+
+plt.plot(laps_x, ver_cumulative_timeline, label="VER Actual Strategy (Clean Air Sim)", color='blue', linestyle='--', linewidth=2.5, alpha=0.8)
+plt.plot(laps_x, dp_cumulative_timeline, label="Model Optimal Strategy", color='#32CD32', linewidth=3)
+
+for lap, action in winning_strategy:
+    if "PIT FOR" in action:
+        plt.axvline(x=lap, color='red', linestyle=':', alpha=0.6)
+        plt.text(lap + 0.5, dp_cumulative_timeline[lap-1] - 5, action, rotation=90, color='red', fontsize=10, fontweight='bold')
+
+plt.title('Cumulative Race Time: AI Strategy vs. Actual Pit Wall', fontsize=16, fontweight='bold')
+plt.xlabel('Lap Number', fontsize=12)
+plt.ylabel('Cumulative Race Time (Seconds)', fontsize=12)
+plt.legend(loc='upper left', shadow=True, fontsize=12)
+
+# Calculate theoretical delta
+theoretical_delta = ver_cumulative_timeline[-1] - dp_cumulative_timeline[-1]
+plt.annotate(f"Model Saves: {theoretical_delta:.2f} seconds!", 
+             xy=(57, dp_cumulative_timeline[-1]), 
+             xytext=(45, dp_cumulative_timeline[-1] - 40),
+             arrowprops=dict(facecolor='black', shrink=0.05),
+             fontsize=12, fontweight='bold', color='green',
+             bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="green", lw=2))
+
+plt.tight_layout()
+plt.show()
