@@ -36,6 +36,7 @@ Once the expected lap time matrix is generated, the algorithm must navigate it t
 - **Goal:** Developed a recursive Dynamic Programming (DP) solver breaking the race into recursive sub-problems, calculating the exact cost of "pitting" vs. "staying out" at every lap.
 - **Constraints:** Enforced the 57-lap total race distance, an elite Red Bull pit lane loss of 23.5s, a minimum stint length of 5 laps, and the mandatory two-compound sporting regulation.
 - **Optimization:** Utilized memoization to store the time costs of previously calculated states (`lap`, `current_compound`, `tire_age`, `used_compounds`), mapping millions of potential strategy trees to output the global minimum race time efficiently.
+- **Degradation Scaling**: Engineered compound-specific degradation multipliers (e.g., SOFT: 1.40) to scale the Tire_Age input, forcing the algorithm to mathematically respect the steeper grip drop-off of softer rubber.
 
 ### Phase 6: Evaluation and Reporting (Completed)
 - **Comparison:** Evaluated the deterministic DP model's theoretically optimal 3-stop strategy against Max Verstappen's actual winning 2-stop strategy (Soft -> Hard -> Soft).
