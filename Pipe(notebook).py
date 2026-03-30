@@ -375,6 +375,7 @@ print(f"VER Actual (real race): {raw_race_time:.2f}s")
 print(f"\nNote: The ~{raw_race_time - best_overall_time:.0f}s gap is expected — it represents")
 print(f"cumulative traffic, pit entry/exit, and real-world noise across 57 laps.")
 
+#-----------
 
 print("\nComparison Graph")
 
@@ -402,7 +403,7 @@ def simulate_strategy_timeline(strategy_sequence, start_tire):
             
     return cumulative_times
 
-# 2. Get the timeline for your AI's optimal strategy
+#Get the timeline for your AI's optimal strategyyy
 dp_cumulative_timeline = simulate_strategy_timeline(winning_strategy, starting_tire)
 
 # eRconstruct Verstappen's ACTUAL 2024 Bahrain Strategy
@@ -435,14 +436,14 @@ for lap, action in winning_strategy:
         plt.axvline(x=lap, color='red', linestyle=':', alpha=0.6)
         plt.text(lap + 0.5, dp_cumulative_timeline[lap-1] - 5, action, rotation=90, color='red', fontsize=10, fontweight='bold')
 
-plt.title('Cumulative Race Time: AI Strategy vs. Actual Pit Wall', fontsize=16, fontweight='bold')
+plt.title('Cumulative Race Time: Model Strategy vs. Actual Pit Wall', fontsize=16, fontweight='bold')
 plt.xlabel('Lap Number', fontsize=12)
 plt.ylabel('Cumulative Race Time (Seconds)', fontsize=12)
 plt.legend(loc='upper left', shadow=True, fontsize=12)
 
 # Calculate theoretical delta
 theoretical_delta = ver_cumulative_timeline[-1] - dp_cumulative_timeline[-1]
-plt.annotate(f"Model Saves: {theoretical_delta:.2f} seconds!", 
+plt.annotate(f"Model Saves: {theoretical_delta:.2f} sec", 
              xy=(57, dp_cumulative_timeline[-1]), 
              xytext=(45, dp_cumulative_timeline[-1] - 40),
              arrowprops=dict(facecolor='black', shrink=0.05),
